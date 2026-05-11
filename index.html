@@ -41,7 +41,7 @@ footer{margin-top:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wra
 const W=window.Telegram?.WebApp;W?.ready();W?.expand();
 const ij=(i,j,d,N)=>d===0?[i,j]:d===1?[j,i]:d===2?[i,N-1-j]:[N-1-j,i];
 function slide(a,N){let s=0,b=a.filter(x=>x),t=[],i=0;while(i<b.length){if(i+1<b.length&&b[i]==b[i+1]){t.push(b[i]*2);s+=b[i]*2;i+=2}else{t.push(b[i++]);}}while(t.length<N)t.push(0);return{t,s,m:t.some((v,j)=>v!==a[j])}}
-function moveGrid(G,d,N){let g=G.map(r=>r.slice()),S=0,ch=0;for(let i=0;i<N;i++){let L=[];for(let j=0;j<N;j++){let[c,e]=ij(i,j,d,N);L.push(g[c][e])}let{z,s,m}=slide(L,N);S+=s;if(m)ch=1;for(let j=0;j<N;j++){let[c,e]=ij(i,j,d,N);g[c][e]=z[j]}}return{g,S,ch}}
+function moveGrid(G,d,N){let g=G.map(r=>r.slice()),S=0,ch=0;for(let i=0;i<N;i++){let L=[];for(let j=0;j<N;j++){let[c,e]=ij(i,j,d,N);L.push(g[c][e])}let{t,s,m}=slide(L,N);S+=s;if(m)ch=1;for(let j=0;j<N;j++){let[c,e]=ij(i,j,d,N);g[c][e]=t[j]}}return{g,S,ch}}
 const Ns=[2,4,8],K=m=>'m48_'+m,Kt='m48_theme',Kl=m=>'m48_lb_'+m;
 let N=4,M='4',G=[],S=0,B={u:3,d:3},H=[],bst=0,sel=null,lb=[];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -74,7 +74,8 @@ bd.addEventListener('pointerup',e=>{let dx=e.clientX-x0,dy=e.clientY-y0,d=Math.h
 bd.addEventListener('pointercancel',e=>{try{bd.releasePointerCapture(e.pointerId)}catch(z){}});
 bd.addEventListener('click',e=>{if(skipTap)return;let t=e.target.closest('.tile');if(!t)return;let i=+t.dataset.i,j=+t.dataset.j;if(!G[i][j]){sel=null;paint();return}sel=[i,j];paint()});
 $('#u').onclick=undo;$('#del').onclick=doDel;$('#nw').onclick=()=>{newG()};$('#st').onclick=openSet;$('#lb').onclick=openLb;
-$('#sv').onclick=()=>{if(!qualifies(S)){W?.showAlert?.('Недостаточно очков для ТОП-5');return}addLb(S);W?.showAlert?.('Результат записан!')};
+function safeAlert(msg){try{if(W?.showAlert)W.showAlert(msg);else alert(msg)}catch(e){alert(msg)}}
+$('#sv').onclick=()=>{if(!qualifies(S)){safeAlert('Недостаточно очков для ТОП-5');return}addLb(S);safeAlert('Результат записан!')};
 document.addEventListener('keydown',e=>{let k=e.key;if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(k))return;e.preventDefault();k==='ArrowLeft'?go(0):k==='ArrowUp'?go(1):k==='ArrowRight'?go(2):go(3)});
 initTheme();applySt(readG());readLb();paint();bd.focus({preventScroll:1});
 </script></body></html>

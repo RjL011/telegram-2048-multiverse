@@ -11,7 +11,7 @@ const mime = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
 };
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 5000;
 http
   .createServer((req, res) => {
     let u = (req.url || "/").split("?")[0];
