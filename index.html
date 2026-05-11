@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>2048: Multiverse</title><style>
+:root{--background-color:#faf8ef;--grid-color:#bbada0;--tile-color:#cdc1b4;--filled-tile-color:#eee4da;--accent-button-color:#8f7a66;--txt:#776e65;--tile-txt:#776e65}
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:var(--background-color);color:var(--txt);font:15px/1.35 system-ui,sans-serif;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));-webkit-tap-highlight-color:transparent}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+h1{font-size:clamp(1rem,4vw,1.25rem);margin:0;font-weight:700}
+.scores{display:flex;gap:6px}.score{background:var(--grid-color);padding:4px 10px;border-radius:8px;font-size:.85rem}.score b{color:#f9f6f2}
+.mode{display:flex;gap:4px;flex-wrap:wrap}
+.mode button,.btn{border:0;border-radius:10px;padding:8px 12px;background:var(--accent-button-color);color:#f9f6f2;font-weight:600;cursor:pointer;font-size:.85rem}
+.mode button.off,.btn:disabled{opacity:.45;cursor:not-allowed}
+.grid-wrap{max-width:min(100vw - 16px,420px);margin:0 auto}
+.board{background:var(--grid-color);border-radius:12px;padding:6px;aspect-ratio:1;display:grid;gap:6px;position:relative;touch-action:none;outline:none;cursor:pointer}
+.board.n2{--fs:clamp(1.8rem,12vw,3rem)}.board.n4{--fs:clamp(1.1rem,7vw,1.75rem)}.board.n8{--fs:clamp(.55rem,2.8vw,.95rem);gap:3px;padding:4px}
+.tile{border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--fs);background:var(--tile-color);color:var(--tile-txt);transition:transform .08s;user-select:none;min-width:0;min-height:0;width:100%;height:100%}
+.tile.sel{outline:3px solid var(--accent-button-color);outline-offset:-2px}
+.tile.v2{background:var(--filled-tile-color,#eee4da);color:#776e65}.tile.v4{background:color-mix(in srgb,var(--filled-tile-color,#eee4da),#776e65 14%);color:#776e65}.tile.v8{background:#f2b179;color:#f9f6f2}.tile.v16{background:#f59563;color:#f9f6f2}.tile.v32{background:#f67c5f;color:#f9f6f2}.tile.v64{background:#f65e3b;color:#f9f6f2}.tile.v128{background:#edcf72;color:#776e65;font-size:calc(var(--fs)*.85)}.tile.v256{background:#edcc61;color:#776e65}.tile.v512{background:#edc850;color:#776e65}.tile.v1024{background:#edc53f;color:#776e65;font-size:calc(var(--fs)*.75)}.tile.v2048{background:#edc22e;color:#776e65;font-size:calc(var(--fs)*.7)}
+.rowbar{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+footer{margin-top:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.overlay.on{display:flex}
+.panel{background:var(--grid-color);border-radius:14px;padding:16px;max-width:360px;width:100%;max-height:85vh;overflow:auto}
+.panel h2{margin:0 0 10px;font-size:1.1rem}.panel label{display:block;margin:8px 0 4px;font-size:.85rem}input[type=color]{width:100%;height:36px;border:0;border-radius:8px;cursor:pointer}
+.lb-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--background-color)}.lb-item:last-child{border:0}
+.av{width:40px;height:40px;border-radius:50%;background:var(--tile-color);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--txt)}.av img{width:100%;height:100%;object-fit:cover}
+</style></head><body>
+<header><h1>2048: Multiverse</h1><div class="scores"><span class="score">Очки <b id="sc">0</b></span><span class="score">Лучший <b id="bst">0</b></span></div></header>
+<div class="mode" id="modes"></div>
+<div class="grid-wrap"><div class="board" id="bd" tabindex="0" title="Кликните сюда для стрелок"></div></div>
+<div class="rowbar">
+<button class="btn" id="u">Undo <span id="uc">3/3</span></button>
+<button class="btn" id="del">Delete <span id="dc">3/3</span></button>
+<button class="btn" id="nw">Новая</button>
+</div>
+<footer>
+<button class="btn" id="st">Настройки</button>
+<button class="btn" id="lb">Лидеры</button>
+<button class="btn" id="sv">В таблицу</button>
+</footer>
+<div class="overlay" id="ov"><div class="panel" id="pnl"></div></div>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+const W=window.Telegram?.WebApp;W?.ready();W?.expand();
+const ij=(i,j,d,N)=>d===0?[i,j]:d===1?[j,i]:d===2?[i,N-1-j]:[N-1-j,i];
+function slide(a,N){let s=0,b=a.filter(x=>x),t=[],i=0;while(i<b.length){if(i+1<b.length&&b[i]==b[i+1]){t.push(b[i]*2);s+=b[i]*2;i+=2}else{t.push(b[i++]);}}while(t.length<N)t.push(0);return{t,s,m:t.some((v,j)=>v!==a[j])}}
+function moveGrid(G,d,N){let g=G.map(r=>r.slice()),S=0,ch=0;for(let i=0;i<N;i++){let L=[];for(let j=0;j<N;j++){let[c,e]=ij(i,j,d,N);L.push(g[c][e])}let{z,s,m}=slide(L,N);S+=s;if(m)ch=1;for(let j=0;j<N;j++){let[c,e]=ij(i,j,d,N);g[c][e]=z[j]}}return{g,S,ch}}
+const Ns=[2,4,8],K=m=>'m48_'+m,Kt='m48_theme',Kl=m=>'m48_lb_'+m;
+let N=4,M='4',G=[],S=0,B={u:3,d:3},H=[],bst=0,sel=null,lb=[];
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+function empty(n){return Array.from({length:n},()=>Array(n).fill(0))}
+function pick(G,n){let e=[];for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(!G[i][j])e.push([i,j]);if(!e.length)return 0;let[r,c]=e[Math.random()*e.length|0];G[r][c]=Math.random()<.9?2:4;return 1}
+function canMove(g,n){for(let d=0;d<4;d++){if(moveGrid(g,d,n).ch)return 1}return 0}
+function saveG(){localStorage.setItem(K(M),JSON.stringify({G,S,B,H,bst}))}
+function readG(){let x;try{x=JSON.parse(localStorage.getItem(K(M))||'null')}catch(e){x=null}return x}
+function applySt(x){if(x&&x.G&&x.G.length===N){G=x.G.map(r=>r.slice());S=x.S|0;B={u:x.B?.u??3,d:x.B?.d??3};H=Array.isArray(x.H)?x.H:[];bst=x.bst!=null?x.bst|0:Math.max(S,0)}else{G=empty(N);pick(G,N);pick(G,N);S=0;B={u:3,d:3};H=[];bst=readG()?.bst|0||0}}
+function user(){const u=W?.initDataUnsafe?.user||{};return{n:[u.first_name,u.last_name].filter(Boolean).join(' ')||u.username||'Игрок',p:u.photo_url||''}}
+function readLb(){try{lb=JSON.parse(localStorage.getItem(Kl(M))||'[]')}catch(e){lb=[]}if(!Array.isArray(lb))lb=[]}
+function writeLb(){localStorage.setItem(Kl(M),JSON.stringify(lb.slice(0,5)))}
+function addLb(sc){readLb();let{n,p}=user(),o={n,sc,p,t:Date.now()};lb.push(o);lb.sort((a,b)=>b.sc-a.sc);lb=lb.slice(0,5);writeLb()}
+function qualifies(sc){readLb();return sc>0&&(lb.length<5||sc>(lb[lb.length-1]?.sc||0))}
+function paint(){let b=$('#bd');b.className='board n'+N;b.style.gridTemplateColumns=b.style.gridTemplateRows=`repeat(${N},minmax(0,1fr))`;b.innerHTML='';for(let i=0;i<N;i++)for(let j=0;j<N;j++){let v=G[i][j],d=document.createElement('div');d.className='tile'+(v?' v'+Math.min(v,2048):'')+(sel&&sel[0]===i&&sel[1]===j?' sel':'');d.textContent=v||'';d.dataset.i=i;d.dataset.j=j;b.appendChild(d)}$('#sc').textContent=S;$('#bst').textContent=Math.max(bst,S);$('#uc').textContent=B.u+'/3';$('#dc').textContent=B.d+'/3';$('#u').disabled=!B.u||!H.length;$('#del').disabled=!B.d||!sel||!G[sel[0]][sel[1]];$$('#modes button').forEach(x=>x.classList.toggle('off',x.dataset.m!=M))}
+function pushH(){H.push({G:G.map(r=>r.slice()),S});if(H.length>30)H.shift()}
+function go(d){let r=moveGrid(G,d,N);if(!r.ch)return;pushH();G=r.g;S+=r.S;bst=Math.max(bst,S);sel=null;pick(G,N);saveG();paint();if(!canMove(G,N))W?.HapticFeedback?.notificationOccurred?.('error')}
+function undo(){if(!B.u||!H.length)return;let x=H.pop();G=x.G.map(r=>r.slice());S=x.S;B.u--;saveG();sel=null;paint()}
+function doDel(){if(!B.d||!sel)return;if(!G[sel[0]][sel[1]])return;G[sel[0]][sel[1]]=0;B.d--;sel=null;saveG();paint()}
+function newG(){G=empty(N);pick(G,N);pick(G,N);S=0;B={u:3,d:3};H=[];saveG();sel=null;paint()}
+function setM(m){saveG();M=m;N=+m;applySt(readG());readLb();sel=null;paint()}
+function openSet(){let Hx=c=>c&&c[0]==='#'?c:'#'+((c||'').match(/\d+[\d.]*/g)||[]).slice(0,3).map(x=>('0'+(0|+x).toString(16)).slice(-2)).join('')||'#888888',g=v=>Hx(getComputedStyle(document.documentElement).getPropertyValue(v).trim());$('#ov').classList.add('on');$('#pnl').innerHTML='<h2>Настройки</h2><label>Фон страницы</label><input type="color" id="c0"><label>Рамка поля</label><input type="color" id="c1"><label>Пустые ячейки</label><input type="color" id="c2"><label>Плитки 2 и 4</label><input type="color" id="c4"><label>Акцент кнопок</label><input type="color" id="c3"><button class="btn" id="cl" style="width:100%;margin-top:12px">Закрыть</button>';let j=JSON.parse(localStorage.getItem(Kt)||'{}'),m=[['--background-color','c0','bg'],['--grid-color','c1','gr'],['--tile-color','c2','tl'],['--filled-tile-color','c4','tf'],['--accent-button-color','c3','ac']];function T(){localStorage.setItem(Kt,JSON.stringify({bg:$('#c0').value,gr:$('#c1').value,tl:$('#c2').value,tf:$('#c4').value,ac:$('#c3').value}))}m.forEach(([css,id,k])=>{let el=$(`#${id}`);el.value=j[k]||g(css);el.oninput=()=>{document.documentElement.style.setProperty(css,el.value);T()};});$('#cl').onclick=()=>{$('#ov').classList.remove('on')}}
+function openLb(){readLb();$('#ov').classList.add('on');$('#pnl').innerHTML='<h2>ТОП-5 ('+N+'×'+N+')</h2>'+(lb.length?lb.map((x,i)=>'<div class="lb-item"><div class="av">'+(x.p?`<img src="${x.p}" alt="" onerror="this.style.display='none'">`:String(x.n||'?').slice(0,2).toUpperCase())+'</div><div style="flex:1"><b>'+(x.n||'').replace(/</g,'')+'</b><br><small>'+x.sc+'</small></div><b>#'+(i+1)+'</b></div>').join(''):'<p>Пока пусто</p>')+'<button class="btn" id="cl" style="width:100%;margin-top:10px">Закрыть</button>';$('#cl').onclick=()=>{$('#ov').classList.remove('on')}}
+function initTheme(){let j=JSON.parse(localStorage.getItem(Kt)||'{}');if(j.bg)document.documentElement.style.setProperty('--background-color',j.bg);if(j.gr)document.documentElement.style.setProperty('--grid-color',j.gr);if(j.tl)document.documentElement.style.setProperty('--tile-color',j.tl);if(j.tf)document.documentElement.style.setProperty('--filled-tile-color',j.tf);if(j.ac)document.documentElement.style.setProperty('--accent-button-color',j.ac)}
+$('#modes').innerHTML=Ns.map(n=>`<button data-m="${n}">${n===2?'2×2 Hardcore':n===4?'4×4 Classic':'8×8 Infinity'}</button>`).join('');
+$$('#modes button').forEach(b=>b.onclick=()=>setM(b.dataset.m));
+let skipTap=0,x0,y0;const bd=$('#bd');
+bd.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;x0=e.clientX;y0=e.clientY;try{bd.setPointerCapture(e.pointerId)}catch(z){}});
+bd.addEventListener('pointerup',e=>{let dx=e.clientX-x0,dy=e.clientY-y0,d=Math.hypot(dx,dy);try{bd.releasePointerCapture(e.pointerId)}catch(z){};if(d<28)return;skipTap=1;setTimeout(()=>{skipTap=0},80);Math.abs(dx)>Math.abs(dy)?go(dx>0?2:0):go(dy>0?3:1)});
+bd.addEventListener('pointercancel',e=>{try{bd.releasePointerCapture(e.pointerId)}catch(z){}});
+bd.addEventListener('click',e=>{if(skipTap)return;let t=e.target.closest('.tile');if(!t)return;let i=+t.dataset.i,j=+t.dataset.j;if(!G[i][j]){sel=null;paint();return}sel=[i,j];paint()});
+$('#u').onclick=undo;$('#del').onclick=doDel;$('#nw').onclick=()=>{newG()};$('#st').onclick=openSet;$('#lb').onclick=openLb;
+$('#sv').onclick=()=>{if(!qualifies(S)){W?.showAlert?.('Недостаточно очков для ТОП-5');return}addLb(S);W?.showAlert?.('Результат записан!')};
+document.addEventListener('keydown',e=>{let k=e.key;if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(k))return;e.preventDefault();k==='ArrowLeft'?go(0):k==='ArrowUp'?go(1):k==='ArrowRight'?go(2):go(3)});
+initTheme();applySt(readG());readLb();paint();bd.focus({preventScroll:1});
+</script></body></html>

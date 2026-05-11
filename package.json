@@ -1,0 +1,7 @@
+{
+  "name": "telegram-2048-multiverse",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  }
+}
